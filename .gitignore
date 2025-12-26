@@ -1,0 +1,50 @@
+# Clés cryptographiques (SÉCURITÉ CRITIQUE)
+privatekey
+publickey
+*.key
+*.pem
+presharedkey
+wg*.conf
+!*.conf.example
+
+# Fichiers de configuration avec données sensibles
+/etc/wireguard/
+*.conf
+!examples/*.conf.example
+
+# Logs
+*.log
+*.logs
+
+# Fichiers temporaires
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Système
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archives
+*.zip
+*.tar.gz
+*.tar.bz2
+
+# Credentials
+credentials/
+secrets/
+*.env
+.env
+
+# QR Codes (peuvent contenir des clés)
+*.png
+*.jpg
+qr-codes/

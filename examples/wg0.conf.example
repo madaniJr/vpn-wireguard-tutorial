@@ -1,0 +1,173 @@
+# Configuration WireGuard - Exemple détaillé
+# Fichier: /etc/wireguard/wg0.conf
+# Documentation: https://www.wireguard.com/quickstart/
+
+##############################################
+# SECTION [Interface] - Configuration locale
+##############################################
+
+[Interface]
+
+# Votre clé privée (GARDEZ-LA SECRÈTE!)
+# Générez-la avec: wg genkey | tee privatekey
+PrivateKey = VOTRE_CLÉ_PRIVÉE_ICI
+
+# Votre adresse IP dans le réseau VPN
+# Format: IP/CIDR
+# Exemple: 10.0.0.2/24 signifie que vous êtes 10.0.0.2 
+# dans un réseau de 256 adresses (10.0.0.0 à 10.0.0.255)
+Address = 10.0.0.2/24
+
+# Si vous voulez aussi IPv6:
+# Address = 10.0.0.2/24, fd42:42:42::2/64
+
+# Serveurs DNS à utiliser quand le VPN est actif
+# Options populaires:
+# - 8.8.8.8, 8.8.4.4 (Google DNS)
+# - 1.1.1.1, 1.0.0.1 (Cloudflare DNS)
+# - 9.9.9.9 (Quad9 - focus privacy)
+# - 208.67.222.222, 208.67.220.220 (OpenDNS)
+DNS = 8.8.8.8, 1.1.1.1
+
+# Port d'écoute local (optionnel)
+# Par défaut: port aléatoire
+# Utilisez un port fixe si vous avez des règles firewall
+# ListenPort = 51820
+
+# MTU (Maximum Transmission Unit) - optionnel
+# Par défaut: détection automatique
+# Réduisez si vous avez des problèmes de connexion
+# MTU = 1420
+
+# Table de routage personnalisée (avancé)
+# Par défaut: auto
+# Table = auto
+
+# Script à exécuter APRÈS l'activation (optionnel)
+# PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+# PostUp = echo "VPN activé!" | systemd-cat -t wireguard
+
+# Script à exécuter AVANT la désactivation (optionnel)
+# PreDown = echo "VPN va s'arrêter" | systemd-cat -t wireguard
+# PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+
+##############################################
+# SECTION [Peer] - Configuration du serveur VPN
+##############################################
+
+[Peer]
+
+# Clé publique du serveur VPN
+# Vous devez l'obtenir de votre fournisseur VPN ou administrateur
+# Générez la clé publique du serveur avec: cat privatekey | wg pubkey
+PublicKey = CLÉ_PUBLIQUE_DU_SERVEUR
+
+# Clé pré-partagée (optionnel, sécurité renforcée)
+# Génération: wg genpsk
+# PresharedKey = CLÉ_PRÉ_PARTAGÉE_OPTIONNELLE
+
+# Adresse du serveur VPN
+# Format: IP_ou_DOMAINE:PORT
+# Exemples:
+# - vpn.example.com:51820
+# - 203.0.113.1:51820
+Endpoint = vpn.monserveur.com:51820
+
+# Quelles adresses IP router via le VPN
+# Options courantes:
+# - 0.0.0.0/0, ::/0        = Tout le trafic (Full VPN)
+# - 10.0.0.0/24            = Seulement le réseau VPN
+# - 192.168.1.0/24         = Seulement un réseau local spécifique
+# - 0.0.0.0/1, 128.0.0.0/1 = Tout sauf le réseau local (split tunnel)
+AllowedIPs = 0.0.0.0/0, ::/0
+
+# Intervalle de keep-alive (en secondes)
+# Utile pour maintenir la connexion à travers les NAT
+# Recommandé: 25 secondes
+# Désactiver: commentez la ligne ou mettez 0
+PersistentKeepalive = 25
+
+##############################################
+# CONFIGURATION AVANCÉE (multi-peer)
+##############################################
+
+# Vous pouvez avoir plusieurs [Peer] pour vous connecter
+# à plusieurs serveurs ou avoir plusieurs clients sur un serveur
+
+# Exemple: Serveur VPN secondaire
+# [Peer]
+# PublicKey = AUTRE_CLÉ_PUBLIQUE
+# Endpoint = vpn2.example.com:51820
+# AllowedIPs = 10.0.1.0/24
+
+##############################################
+# EXEMPLES DE CONFIGURATIONS
+##############################################
+
+# EXEMPLE 1: VPN complet (tout le trafic passe par le VPN)
+# [Interface]
+# PrivateKey = VOTRE_CLÉ
+# Address = 10.0.0.2/24
+# DNS = 8.8.8.8
+# [Peer]
+# PublicKey = CLÉ_SERVEUR
+# Endpoint = vpn.example.com:51820
+# AllowedIPs = 0.0.0.0/0
+# PersistentKeepalive = 25
+
+# EXEMPLE 2: Split tunneling (seulement le réseau VPN)
+# [Interface]
+# PrivateKey = VOTRE_CLÉ
+# Address = 10.0.0.2/24
+# [Peer]
+# PublicKey = CLÉ_SERVEUR
+# Endpoint = vpn.example.com:51820
+# AllowedIPs = 10.0.0.0/24
+# PersistentKeepalive = 25
+
+# EXEMPLE 3: VPN pour accéder à un réseau local distant
+# [Interface]
+# PrivateKey = VOTRE_CLÉ
+# Address = 10.0.0.2/24
+# [Peer]
+# PublicKey = CLÉ_SERVEUR
+# Endpoint = vpn.example.com:51820
+# AllowedIPs = 192.168.1.0/24
+# PersistentKeepalive = 25
+
+##############################################
+# SÉCURITÉ
+##############################################
+
+# ⚠️  IMPORTANT:
+# 1. Gardez votre clé privée secrète
+# 2. Utilisez des permissions restrictives: chmod 600 /etc/wireguard/wg0.conf
+# 3. Ne partagez JAMAIS votre clé privée
+# 4. Changez vos clés régulièrement
+# 5. Utilisez une PresharedKey pour plus de sécurité
+
+##############################################
+# DÉPANNAGE
+##############################################
+
+# Si le VPN ne se connecte pas:
+# 1. Vérifiez que le port est ouvert: sudo ufw allow 51820/udp
+# 2. Vérifiez les logs: sudo journalctl -u wg-quick@wg0 -f
+# 3. Vérifiez la connectivité: ping vpn.monserveur.com
+# 4. Vérifiez le statut: sudo wg show
+
+# Si vous n'avez pas Internet avec le VPN:
+# 1. Vérifiez le DNS: cat /etc/resolv.conf
+# 2. Testez: nslookup google.com
+# 3. Vérifiez le routage: ip route show
+
+##############################################
+# COMMANDES UTILES
+##############################################
+
+# Activer le VPN:        sudo wg-quick up wg0
+# Désactiver le VPN:     sudo wg-quick down wg0
+# Voir le statut:        sudo wg show
+# Voir votre IP:         curl ifconfig.me
+# Tester DNS:            nslookup google.com
+# Auto-démarrage:        sudo systemctl enable wg-quick@wg0

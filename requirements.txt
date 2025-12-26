@@ -1,0 +1,21 @@
+# Dépendances système pour WireGuard VPN
+
+# LINUX (Ubuntu/Debian)
+# Installation: sudo apt install wireguard wireguard-tools
+
+# Paquets principaux
+wireguard
+wireguard-tools
+
+# Outils utiles
+curl            # Pour tester l'IP et télécharger
+resolvconf      # Gestion DNS
+qrencode        # Générer QR codes pour mobile
+iptables        # Firewall (généralement déjà installé)
+net-tools       # Outils réseau (ifconfig, netstat)
+
+# Optionnels
+speedtest-cli   # Test de vitesse
+nmap            # Scan réseau
+tcpdump         # Analyse de paquets
+htop            # Monitoring système

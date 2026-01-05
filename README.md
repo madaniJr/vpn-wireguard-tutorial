@@ -120,6 +120,25 @@ WireGuard est un protocole VPN moderne qui surpasse les anciennes solutions :
 # Mettre à jour le système
 sudo apt update && sudo apt upgrade -y
 
+( si pb Importe la clé officielle Kali :
+
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://archive.kali.org/archive-key.asc | gpg --dearmor -o /etc/apt/keyrings/kali-archive-keyring.gpg
+
+
+Vérifie que ton dépôt est bien configuré :
+
+nano /etc/apt/sources.list
+
+
+Il doit contenir exactement :
+
+deb [signed-by=/etc/apt/keyrings/kali-archive-keyring.gpg] http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware
+
+Ensuite :
+
+apt update )
+
 # Installer WireGuard
 sudo apt install wireguard -y
 

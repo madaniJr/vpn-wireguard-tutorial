@@ -1,12 +1,13 @@
-# 🎓 TP : Configuration d'un VPN WireGuard
+# 🎓 TP : Configuration d'un VPN WireGuard - Version Complète avec Serveur Local
 
-Guide pratique pour configurer et tester un VPN WireGuard sur votre système.
+Guide pratique pour configurer et tester un VPN WireGuard avec serveur et client sur votre système.
 
 ## 🎯 Objectifs du TP
 
 À la fin de ce TP, vous serez capable de :
 - ✅ Installer WireGuard sur votre système
-- ✅ Générer des clés cryptographiques
+- ✅ Générer des clés cryptographiques pour serveur et client
+- ✅ Configurer un serveur VPN local
 - ✅ Configurer un client VPN
 - ✅ Établir une connexion VPN sécurisée
 - ✅ Vérifier et tester votre connexion VPN
@@ -26,32 +27,24 @@ Installer WireGuard et s'assurer que le système est prêt.
 
 #### 1.1 Mettre à jour le système
 
-```bash
 sudo apt update && sudo apt upgrade -y
-```
 
-**Pourquoi ?** Pour avoir les dernières versions des paquets et correctifs de sécurité.
+Pourquoi ? Pour avoir les dernières versions des paquets et correctifs de sécurité.
 
 #### 1.2 Installer WireGuard
 
-```bash
 sudo apt install wireguard -y
-```
 
 #### 1.3 Vérifier l'installation
 
-```bash
 wg --version
-```
 
-**Résultat attendu :**
-```
+Résultat attendu :
 wireguard-tools v1.x.x
-```
 
 ### ✅ Critères de validation
 
-- [ ] La commande `wg --version` affiche une version
+- [ ] La commande wg --version affiche une version
 - [ ] Aucune erreur lors de l'installation
 
 ### 💡 Questions de réflexion
@@ -59,474 +52,473 @@ wireguard-tools v1.x.x
 1. Pourquoi est-il important de mettre à jour le système avant d'installer ?
 2. Que se passe-t-il si WireGuard n'est pas dans les dépôts ?
 
-<details>
-<summary>💡 Voir les réponses</summary>
-
+Réponses :
 1. Pour éviter les conflits de dépendances et avoir les derniers correctifs de sécurité
 2. Il faut ajouter le dépôt officiel WireGuard ou compiler depuis les sources
-</details>
 
 ---
 
 ## Étape 2 : Générer les clés cryptographiques
 
 ### 🎯 Objectif
-Créer une paire de clés (privée/publique) pour l'authentification.
+Créer les paires de clés (privée/publique) pour le serveur ET le client.
 
 ### 📝 Instructions
 
 #### 2.1 Créer un dossier pour les clés
 
-```bash
 mkdir -p ~/wireguard-keys
 cd ~/wireguard-keys
-```
 
-#### 2.2 Générer la clé privée
+#### 2.2 Générer les clés du CLIENT
 
-```bash
-wg genkey | tee privatekey
-```
+wg genkey | tee client_private
+cat client_private | wg pubkey > client_public
 
-**Ce qui se passe :**
-- `wg genkey` : Génère une clé privée aléatoire
-- `tee privatekey` : Affiche ET sauvegarde dans le fichier
+#### 2.3 Générer les clés du SERVEUR
 
-#### 2.3 Générer la clé publique
+wg genkey | tee server_private
+cat server_private | wg pubkey > server_public
 
-```bash
-cat privatekey | wg pubkey > publickey
-```
+#### 2.4 Afficher toutes les clés
 
-**Ce qui se passe :**
-- On lit la clé privée
-- On génère la clé publique correspondante
-- On sauvegarde dans `publickey`
-
-#### 2.4 Afficher les clés
-
-```bash
-echo "=== Clé privée (À GARDER SECRÈTE) ==="
-cat privatekey
+echo "========================================="
+echo "🔑 CLÉ PRIVÉE CLIENT (à garder secrète)"
+echo "========================================="
+cat client_private
 echo ""
-echo "=== Clé publique (Peut être partagée) ==="
-cat publickey
-```
+echo "========================================="
+echo "🔓 CLÉ PUBLIQUE CLIENT"
+echo "========================================="
+cat client_public
+echo ""
+echo "========================================="
+echo "🔑 CLÉ PRIVÉE SERVEUR (à garder secrète)"
+echo "========================================="
+cat server_private
+echo ""
+echo "========================================="
+echo "🔓 CLÉ PUBLIQUE SERVEUR"
+echo "========================================="
+cat server_public
+
+📝 NOTEZ CES 4 CLÉS quelque part, vous en aurez besoin pour la configuration !
 
 #### 2.5 Sécuriser les permissions
 
-```bash
-# Seul le propriétaire peut lire la clé privée
-chmod 600 privatekey
-
-# Vérifier les permissions
+chmod 600 client_private server_private
 ls -l
-```
 
 ### ✅ Critères de validation
 
-- [ ] Les fichiers `privatekey` et `publickey` existent
-- [ ] Les deux clés sont différentes
-- [ ] La clé privée a les permissions 600 (-rw-------)
+- [ ] Les 4 fichiers existent (client_private, client_public, server_private, server_public)
+- [ ] Toutes les clés sont différentes
+- [ ] Les clés privées ont les permissions 600 (-rw-------)
 
 ### 💡 Questions de réflexion
 
-1. Pourquoi la clé privée doit-elle rester secrète ?
-2. Que se passe-t-il si quelqu'un obtient votre clé privée ?
-3. Peut-on régénérer la même clé publique à partir de la clé privée ?
+1. Pourquoi génère-t-on 2 paires de clés (serveur + client) ?
+2. Que se passe-t-il si on inverse les clés publiques/privées ?
+3. Peut-on utiliser la même paire de clés pour serveur et client ?
 
-<details>
-<summary>💡 Voir les réponses</summary>
-
-1. C'est votre identité numérique. Avec elle, quelqu'un peut se faire passer pour vous.
-2. Il peut se connecter au VPN en se faisant passer pour vous et voir tout votre trafic.
-3. Oui ! La clé publique est mathématiquement dérivée de la clé privée (mais pas l'inverse).
-</details>
+Réponses :
+1. Chaque entité (serveur et client) a besoin de sa propre identité cryptographique
+2. La connexion ne fonctionnera pas - chaque entité doit avoir SA clé privée
+3. Techniquement oui, mais c'est une très mauvaise pratique de sécurité
 
 ---
 
-## Étape 3 : Configurer le client VPN
+## Étape 3 : Configurer le serveur VPN
 
 ### 🎯 Objectif
-Créer le fichier de configuration WireGuard.
+Créer et démarrer le serveur WireGuard qui acceptera les connexions.
 
 ### 📝 Instructions
 
-#### 3.1 Créer le fichier de configuration
+#### 3.1 Créer le fichier de configuration du serveur
 
-```bash
-sudo nano /etc/wireguard/wg0.conf
-```
+sudo nano /etc/wireguard/wg1.conf
 
-#### 3.2 Ajouter la configuration
+#### 3.2 Ajouter la configuration du serveur
 
-Copiez cette configuration et **remplacez les valeurs** :
+Copiez cette configuration et REMPLACEZ les valeurs entre crochets :
 
-```ini
 [Interface]
-# Votre clé privée générée à l'étape 2
-PrivateKey = VOTRE_CLÉ_PRIVÉE_ICI
-
-# Votre adresse IP dans le réseau VPN
-# Le /24 signifie un sous-réseau de 256 adresses
-Address = 10.0.0.2/24
-
-# Serveurs DNS à utiliser quand le VPN est actif
-# 8.8.8.8 = Google DNS
-# 1.1.1.1 = Cloudflare DNS
-DNS = 8.8.8.8, 1.1.1.1
+Address = 10.0.0.1/24
+ListenPort = 51820
+PrivateKey = [COLLEZ_ICI_LE_CONTENU_DE_server_private]
+PostUp = sysctl -w net.ipv4.ip_forward=1
+PostDown = sysctl -w net.ipv4.ip_forward=0
 
 [Peer]
-# Clé publique du SERVEUR VPN
-# Vous devez l'obtenir de votre fournisseur VPN
-PublicKey = CLÉ_PUBLIQUE_DU_SERVEUR
+PublicKey = [COLLEZ_ICI_LE_CONTENU_DE_client_public]
+AllowedIPs = 10.0.0.2/32
 
-# Adresse et port du serveur VPN
-# Format: domaine.com:port ou IP:port
-Endpoint = vpn.monserveur.com:51820
+#### 3.3 Comprendre la configuration serveur
 
-# Quelles IP router via le VPN
-# 0.0.0.0/0 = Tout le trafic IPv4
-# ::/0 = Tout le trafic IPv6
-AllowedIPs = 0.0.0.0/0, ::/0
+Section Interface :
+- Address : IP du serveur dans le VPN (10.0.0.1)
+- ListenPort : Port d'écoute (51820 par défaut)
+- PrivateKey : Identité cryptographique du serveur
+- PostUp/PostDown : Commandes au démarrage/arrêt
 
-# Envoyer un paquet keep-alive toutes les 25 secondes
-# Utile pour maintenir la connexion à travers les NAT
-PersistentKeepalive = 25
-```
-
-#### 3.3 Comprendre la configuration
-
-| Section | Paramètre | Description |
-|---------|-----------|-------------|
-| **Interface** | PrivateKey | Votre identité cryptographique |
-| | Address | Votre IP dans le VPN |
-| | DNS | Serveurs DNS à utiliser |
-| **Peer** | PublicKey | Identité du serveur VPN |
-| | Endpoint | Où se connecter |
-| | AllowedIPs | Quel trafic router |
-| | PersistentKeepalive | Maintien de connexion |
+Section Peer :
+- PublicKey : Identité du client autorisé
+- AllowedIPs : IP que le client peut utiliser
 
 #### 3.4 Sauvegarder et fermer
 
-```
 CTRL + X
 Y (pour Yes)
 ENTRÉE
-```
 
-#### 3.5 Vérifier la configuration
+#### 3.5 Sécuriser le fichier
 
-```bash
-sudo cat /etc/wireguard/wg0.conf
-```
+sudo chmod 600 /etc/wireguard/wg1.conf
 
-#### 3.6 Sécuriser le fichier
+#### 3.6 Démarrer le serveur
 
-```bash
-sudo chmod 600 /etc/wireguard/wg0.conf
-```
+sudo wg-quick up wg1
+
+Résultat attendu :
+[#] ip link add wg1 type wireguard
+[#] wg setconf wg1 /dev/fd/63
+[#] ip -4 address add 10.0.0.1/24 dev wg1
+[#] ip link set mtu 1420 up dev wg1
+[#] sysctl -w net.ipv4.ip_forward=1
+
+#### 3.7 Vérifier le serveur
+
+sudo wg show wg1
+
+Résultat attendu :
+interface: wg1
+  public key: [votre clé publique serveur]
+  private key: (hidden)
+  listening port: 51820
+
+peer: [clé publique du client]
+  allowed ips: 10.0.0.2/32
 
 ### ✅ Critères de validation
 
-- [ ] Le fichier `/etc/wireguard/wg0.conf` existe
-- [ ] Toutes les valeurs sont remplies (pas de "VOTRE_CLÉ" restant)
+- [ ] Le fichier /etc/wireguard/wg1.conf existe
+- [ ] Les permissions sont 600
+- [ ] Le serveur démarre sans erreur
+- [ ] La commande wg show wg1 affiche les informations
+
+### 💡 Questions de réflexion
+
+1. Pourquoi utilise-t-on wg1 au lieu de wg0 pour le serveur ?
+2. À quoi sert PostUp = sysctl -w net.ipv4.ip_forward=1 ?
+3. Que signifie AllowedIPs = 10.0.0.2/32 ?
+
+Réponses :
+1. Pour différencier serveur (wg1) et client (wg0) sur la même machine
+2. Active le routage IP pour que le serveur puisse transférer les paquets
+3. Autorise uniquement l'IP 10.0.0.2 pour ce client (le /32 = une seule adresse)
+
+---
+
+## Étape 4 : Configurer le client VPN
+
+### 🎯 Objectif
+Créer la configuration client qui se connectera au serveur.
+
+### 📝 Instructions
+
+#### 4.1 Créer le fichier de configuration du client
+
+sudo nano /etc/wireguard/wg0.conf
+
+#### 4.2 Ajouter la configuration du client
+
+Copiez cette configuration et REMPLACEZ les valeurs entre crochets :
+
+[Interface]
+PrivateKey = [COLLEZ_ICI_LE_CONTENU_DE_client_private]
+Address = 10.0.0.2/24
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = [COLLEZ_ICI_LE_CONTENU_DE_server_public]
+Endpoint = 127.0.0.1:51820
+AllowedIPs = 10.0.0.0/24
+PersistentKeepalive = 25
+
+#### 4.3 Comprendre la configuration client
+
+Section Interface :
+- PrivateKey : Identité cryptographique du client
+- Address : IP du client dans le VPN (10.0.0.2)
+- DNS : Serveurs DNS à utiliser
+
+Section Peer :
+- PublicKey : Identité du serveur
+- Endpoint : Où se connecter (IP:port du serveur)
+- AllowedIPs : Quel trafic router via le VPN
+- PersistentKeepalive : Maintien de connexion
+
+#### 4.4 Sauvegarder et fermer
+
+CTRL + X
+Y
+ENTRÉE
+
+#### 4.5 Sécuriser le fichier
+
+sudo chmod 600 /etc/wireguard/wg0.conf
+
+### ✅ Critères de validation
+
+- [ ] Le fichier /etc/wireguard/wg0.conf existe
+- [ ] Toutes les valeurs sont remplies (pas de crochets restants)
 - [ ] Les permissions sont 600
 
 ### 💡 Questions de réflexion
 
-1. Pourquoi utilise-t-on `AllowedIPs = 0.0.0.0/0` ?
-2. Que se passerait-il avec `AllowedIPs = 192.168.1.0/24` ?
-3. À quoi sert `PersistentKeepalive` ?
+1. Pourquoi Endpoint = 127.0.0.1:51820 ?
+2. Que signifie AllowedIPs = 10.0.0.0/24 ?
+3. Quelle serait la différence avec AllowedIPs = 0.0.0.0/0 ?
 
-<details>
-<summary>💡 Voir les réponses</summary>
-
-1. Pour router TOUT le trafic via le VPN (split tunneling désactivé)
-2. Seul le trafic vers 192.168.1.x passerait par le VPN (split tunneling)
-3. À maintenir la connexion active même sans trafic, évite les déconnexions NAT
-</details>
+Réponses :
+1. 127.0.0.1 = localhost, car le serveur est sur la même machine (pour le TP)
+2. Seul le trafic vers le réseau 10.0.0.x passera par le VPN
+3. Tout le trafic Internet passerait par le VPN (split tunneling désactivé)
 
 ---
 
-## Étape 4 : Établir la connexion VPN
+## Étape 5 : Établir la connexion VPN
 
 ### 🎯 Objectif
-Activer le VPN et vérifier la connexion.
+Connecter le client au serveur et vérifier la connexion.
 
 ### 📝 Instructions
 
-#### 4.1 Vérifier votre IP AVANT le VPN
+#### 5.1 Vérifier que le serveur est actif
 
-```bash
-echo "=== Votre IP actuelle ==="
-curl ifconfig.me
-echo ""
-echo "=== Informations détaillées ==="
-curl ipinfo.io
-```
+sudo wg show wg1
 
-**Notez ces informations !** Vous les comparerez après.
+Si pas actif, redémarrez-le :
+sudo wg-quick up wg1
 
-#### 4.2 Activer le VPN
+#### 5.2 Démarrer le client
 
-```bash
 sudo wg-quick up wg0
-```
 
-**Résultat attendu :**
-```
+Résultat attendu :
 [#] ip link add wg0 type wireguard
 [#] wg setconf wg0 /dev/fd/63
 [#] ip -4 address add 10.0.0.2/24 dev wg0
 [#] ip link set mtu 1420 up dev wg0
-[#] resolvconf -a wg0 -m 0 -x
-[#] wg set wg0 fwmark 51820
-[#] ip -4 route add 0.0.0.0/0 dev wg0 table 51820
-[#] ip -4 rule add not fwmark 51820 table 51820
-[#] ip -4 rule add table main suppress_prefixlength 0
-[#] sysctl -q net.ipv4.conf.all.src_valid_mark=1
-[#] nft -f /dev/fd/63
-```
 
-#### 4.3 Vérifier le statut
+#### 5.3 Vérifier le statut du client
 
-```bash
-sudo wg show
-```
+sudo wg show wg0
 
-**Résultat attendu :**
-```
+Résultat attendu :
 interface: wg0
-  public key: [votre clé publique]
+  public key: [votre clé publique client]
   private key: (hidden)
   listening port: [port]
 
 peer: [clé publique du serveur]
-  endpoint: [IP:port du serveur]
-  allowed ips: 0.0.0.0/0, ::/0
-  latest handshake: [temps depuis la connexion]
-  transfer: [données reçues] received, [données envoyées] sent
-```
+  endpoint: 127.0.0.1:51820
+  allowed ips: 10.0.0.0/24
+  latest handshake: [il y a quelques secondes]
+  transfer: X B received, Y B sent
 
-#### 4.4 Vérifier votre nouvelle IP
+⚠️ IMPORTANT : La ligne "latest handshake" doit apparaître ! Cela signifie que la connexion est établie.
 
-```bash
-echo "=== Votre nouvelle IP (via VPN) ==="
-curl ifconfig.me
-echo ""
-echo "=== Informations détaillées ==="
-curl ipinfo.io
-```
+#### 5.4 Tester la connexion : Ping du client vers le serveur
 
-**L'IP doit être différente !** Elle devrait être celle du serveur VPN.
+ping -c 4 10.0.0.1
 
-#### 4.5 Tester la connectivité
+Résultat attendu :
+PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.123 ms
+64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=0.089 ms
+...
+--- 10.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss
 
-```bash
-# Test ping
-ping -c 4 8.8.8.8
+#### 5.5 Test depuis le serveur vers le client
 
-# Test DNS
-nslookup google.com
+ping -c 4 10.0.0.2
 
-# Test web
-curl -I https://www.google.com
-```
+#### 5.6 Vérifier les statistiques en temps réel
+
+watch -n 1 sudo wg show wg1
+
+Ou sur le client (dans un autre terminal) :
+watch -n 1 sudo wg show wg0
+
+Vous verrez les compteurs "transfer" augmenter !
 
 ### ✅ Critères de validation
 
-- [ ] La commande `wg-quick up wg0` réussit sans erreur
-- [ ] `wg show` affiche des informations de connexion
-- [ ] Votre IP publique a changé
-- [ ] Vous pouvez naviguer sur Internet
+- [ ] La commande wg-quick up wg0 réussit sans erreur
+- [ ] wg show wg0 affiche "latest handshake"
+- [ ] Le ping vers 10.0.0.1 fonctionne
+- [ ] Le ping vers 10.0.0.2 fonctionne
+- [ ] Les statistiques de transfert augmentent
 
 ### 💡 En cas d'erreur
 
-**Erreur : "Cannot find device wg0"**
-```bash
-# Vérifier que le module est chargé
+Erreur : "Cannot find device wg0"
 sudo modprobe wireguard
-```
 
-**Erreur : "Cannot resolve host"**
-```bash
-# Vérifier le DNS
-cat /etc/resolv.conf
-# Essayer avec une IP directement dans Endpoint
-```
+Pas de "latest handshake"
+sudo cat /etc/wireguard/wg0.conf
+sudo cat /etc/wireguard/wg1.conf
+sudo wg-quick down wg1 && sudo wg-quick up wg1
+sudo wg-quick down wg0 && sudo wg-quick up wg0
 
-**Pas de connexion Internet**
-```bash
-# Vérifier les routes
+Le ping ne fonctionne pas
+sudo ufw status
 ip route show
-# Redémarrer le VPN
-sudo wg-quick down wg0
-sudo wg-quick up wg0
-```
 
 ---
 
-## Étape 5 : Tests et vérifications avancés
+## Étape 6 : Tests et vérifications avancés
 
 ### 🎯 Objectif
-S'assurer que le VPN fonctionne correctement et en toute sécurité.
+S'assurer que le VPN fonctionne correctement.
 
 ### 📝 Instructions
 
-#### 5.1 Test de fuite DNS
+#### 6.1 Afficher les interfaces réseau
 
-```bash
-# Vérifier quel DNS est utilisé
-nslookup google.com
+ip addr show
 
-# Ou utiliser un site de test
-curl https://www.dnsleaktest.com/
-```
+Vous devriez voir wg0 et wg1 avec leurs adresses IP respectives.
 
-**Résultat attendu :** Vous devriez voir les DNS configurés dans wg0.conf (8.8.8.8).
+#### 6.2 Afficher les routes
 
-#### 5.2 Test de fuite WebRTC
+ip route show
 
-Ouvrez votre navigateur et allez sur :
-- https://browserleaks.com/webrtc
-- https://ipleak.net/
+Vous devriez voir les routes vers 10.0.0.0/24 via wg0 et wg1.
 
-**Résultat attendu :** Seule l'IP du VPN doit apparaître.
+#### 6.3 Monitorer les connexions en temps réel
 
-#### 5.3 Test de vitesse
+Terminal 1 : Stats du serveur
+watch -n 1 'sudo wg show wg1'
 
-```bash
-# Installer speedtest-cli
-sudo apt install speedtest-cli -y
+Terminal 2 : Stats du client
+watch -n 1 'sudo wg show wg0'
 
-# Test SANS VPN
-sudo wg-quick down wg0
-speedtest-cli
+Terminal 3 : Générer du trafic
+ping 10.0.0.1
 
-# Test AVEC VPN
-sudo wg-quick up wg0
-speedtest-cli
-```
+Observez les compteurs augmenter !
 
-Comparez les résultats !
+#### 6.4 Test de bande passante
 
-#### 5.4 Monitorer la connexion
+sudo apt install iperf3 -y
 
-```bash
-# Afficher les stats en temps réel
-watch -n 1 sudo wg show
-```
+Sur le serveur (terminal 1) :
+iperf3 -s -B 10.0.0.1
 
-Ouvrez un navigateur et naviguez. Vous verrez les statistiques changer.
+Sur le client (terminal 2) :
+iperf3 -c 10.0.0.1 -t 10
 
-#### 5.5 Logs et débogage
+#### 6.5 Logs et débogage
 
-```bash
-# Voir les logs système
+sudo journalctl -u wg-quick@wg1 -f
 sudo journalctl -u wg-quick@wg0 -f
-
-# Ou dans les logs généraux
 sudo dmesg | grep wireguard
-```
 
 ### ✅ Critères de validation
 
-- [ ] Pas de fuite DNS détectée
-- [ ] Seule l'IP VPN est visible
-- [ ] La connexion est stable
-- [ ] Internet fonctionne correctement
+- [ ] Les interfaces wg0 et wg1 apparaissent dans ip addr
+- [ ] Les routes VPN sont présentes
+- [ ] Les statistiques changent en temps réel
+- [ ] Le test iperf3 fonctionne
 
 ---
 
-## Étape 6 : Gestion du VPN
+## Étape 7 : Gestion du VPN
 
 ### 🎯 Objectif
 Apprendre à gérer le VPN au quotidien.
 
 ### 📝 Instructions
 
-#### 6.1 Arrêter le VPN
+#### 7.1 Arrêter le VPN
 
-```bash
 sudo wg-quick down wg0
-```
+sudo wg-quick down wg1
 
-#### 6.2 Redémarrer le VPN
+#### 7.2 Redémarrer le VPN
 
-```bash
+sudo wg-quick down wg1 && sudo wg-quick up wg1
 sudo wg-quick down wg0 && sudo wg-quick up wg0
-```
 
-#### 6.3 Activer au démarrage du système
+#### 7.3 Activer au démarrage du système
 
-```bash
-# Activer le service
+sudo systemctl enable wg-quick@wg1
 sudo systemctl enable wg-quick@wg0
-
-# Démarrer maintenant
-sudo systemctl start wg-quick@wg0
-
-# Vérifier le statut
+sudo systemctl status wg-quick@wg1
 sudo systemctl status wg-quick@wg0
-```
 
-#### 6.4 Désactiver le démarrage automatique
+#### 7.4 Désactiver le démarrage automatique
 
-```bash
+sudo systemctl disable wg-quick@wg1
 sudo systemctl disable wg-quick@wg0
-sudo systemctl stop wg-quick@wg0
-```
 
-#### 6.5 Script de gestion rapide
+#### 7.5 Script de gestion rapide
 
-Créez un script pratique :
+nano ~/vpn-manager.sh
 
-```bash
-nano ~/vpn.sh
-```
+Copiez ce contenu :
 
-Contenu :
-
-```bash
 #!/bin/bash
 
 case "$1" in
-    start|up|on)
-        sudo wg-quick up wg0
-        echo "✅ VPN activé"
+    start-server)
+        sudo wg-quick up wg1
+        echo "✅ Serveur VPN démarré"
         ;;
-    stop|down|off)
+    stop-server)
+        sudo wg-quick down wg1
+        echo "❌ Serveur VPN arrêté"
+        ;;
+    start-client)
+        sudo wg-quick up wg0
+        echo "✅ Client VPN connecté"
+        ;;
+    stop-client)
         sudo wg-quick down wg0
-        echo "❌ VPN désactivé"
+        echo "❌ Client VPN déconnecté"
         ;;
     status)
-        sudo wg show
+        echo "=== SERVEUR (wg1) ==="
+        sudo wg show wg1
+        echo ""
+        echo "=== CLIENT (wg0) ==="
+        sudo wg show wg0
         ;;
-    ip)
-        curl ifconfig.me
+    restart)
+        sudo wg-quick down wg1 && sudo wg-quick up wg1
+        sudo wg-quick down wg0 && sudo wg-quick up wg0
+        echo "🔄 VPN redémarré"
         ;;
     *)
-        echo "Usage: $0 {start|stop|status|ip}"
+        echo "Usage: $0 {start-server|stop-server|start-client|stop-client|status|restart}"
         exit 1
         ;;
 esac
-```
 
 Rendre exécutable :
-
-```bash
-chmod +x ~/vpn.sh
-```
+chmod +x ~/vpn-manager.sh
 
 Utiliser :
-
-```bash
-~/vpn.sh start   # Démarrer
-~/vpn.sh stop    # Arrêter
-~/vpn.sh status  # Voir le statut
-~/vpn.sh ip      # Voir l'IP actuelle
-```
+~/vpn-manager.sh start-server
+~/vpn-manager.sh start-client
+~/vpn-manager.sh status
+~/vpn-manager.sh restart
+~/vpn-manager.sh stop-client
+~/vpn-manager.sh stop-server
 
 ---
 
@@ -534,39 +526,88 @@ Utiliser :
 
 Félicitations ! Vous avez maintenant :
 - ✅ Installé WireGuard
+- ✅ Configuré un serveur VPN local
 - ✅ Configuré un client VPN
 - ✅ Établi une connexion sécurisée
 - ✅ Testé et vérifié la connexion
 - ✅ Appris à gérer le VPN
 
+### 📊 Tableau récapitulatif
+
+Composant | Interface | Adresse IP | Fichier config | Commande
+----------|-----------|------------|----------------|----------
+Serveur | wg1 | 10.0.0.1/24 | /etc/wireguard/wg1.conf | wg-quick up wg1
+Client | wg0 | 10.0.0.2/24 | /etc/wireguard/wg0.conf | wg-quick up wg0
+
+### 🔑 Clés générées
+
+Fichier | Utilisation | Visibilité
+--------|-------------|------------
+client_private | Config client (PrivateKey) | Secrète
+client_public | Config serveur (PublicKey Peer) | Partageable
+server_private | Config serveur (PrivateKey) | Secrète
+server_public | Config client (PublicKey Peer) | Partageable
+
 ### 📚 Pour aller plus loin
 
-1. **Configurer votre propre serveur VPN**
-   - Installer WireGuard sur un VPS
-   - Configurer le forwarding IP
-   - Gérer plusieurs clients
+1. Tester avec 2 machines différentes
+   - Remplacer Endpoint = 127.0.0.1:51820 par l'IP réelle du serveur
+   - Configurer le firewall pour autoriser le port 51820
 
-2. **Split tunneling**
-   - Router seulement certains sites via le VPN
-   - Conserver la vitesse maximale pour le reste
+2. Ajouter plusieurs clients
+   - Créer de nouvelles paires de clés
+   - Ajouter des sections [Peer] supplémentaires dans wg1.conf
+   - Attribuer des IP différentes (10.0.0.3, 10.0.0.4, etc.)
 
-3. **VPN sur mobile**
-   - Installer l'application WireGuard
-   - Scanner le QR code de configuration
+3. Router tout le trafic via le VPN
+   - Changer AllowedIPs = 0.0.0.0/0 dans la config client
+   - Configurer le NAT sur le serveur
 
-4. **Sécurité avancée**
+4. Sécurité avancée
    - Changer régulièrement les clés
-   - Utiliser des kill-switch
-   - Configurer des règles firewall
+   - Utiliser un kill-switch
+   - Configurer des règles firewall strictes
 
 ---
 
-## 🆘 Aide et support
+## 🆘 Aide et dépannage
 
-- 📖 [Documentation officielle](https://www.wireguard.com/quickstart/)
-- 💬 [Forum WireGuard](https://lists.zx2c4.com/mailman/listinfo/wireguard)
-- 🐛 Problèmes ? Ouvrez une issue sur GitHub
+### Problèmes courants
+
+Le serveur ne démarre pas
+sudo journalctl -xe
+sudo netstat -tulpn | grep 51820
+
+Pas de "latest handshake"
+- Vérifiez que les clés sont correctes dans les configs
+- Vérifiez que le serveur est bien démarré
+- Redémarrez serveur puis client
+
+Le ping ne fonctionne pas
+- Vérifiez que "latest handshake" est présent
+- Vérifiez les routes avec ip route show
+- Vérifiez le firewall avec sudo ufw status
+
+### Commandes utiles
+
+sudo wg show all
+
+Supprimer complètement la config :
+sudo wg-quick down wg0
+sudo wg-quick down wg1
+sudo rm /etc/wireguard/wg*.conf
+
+Réinitialiser tout :
+cd ~/wireguard-keys
+rm -f *
 
 ---
 
-**Bon VPN ! 🔐🚀**
+## 📖 Ressources
+
+- Documentation officielle WireGuard : https://www.wireguard.com/quickstart/
+- Forum WireGuard : https://lists.zx2c4.com/mailman/listinfo/wireguard
+
+---
+
+Bon VPN ! 🔐🚀
